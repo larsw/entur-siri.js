@@ -1,0 +1,23 @@
+{
+  "name": "entur-siri.js",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Utilities to fetch SIRI-based data from entur",
+  "main": "index.js",
+  "scripts": {
+    "siri-vm-poll-fetcher": "babel-node siri/vm/poll-fetcher.js"
+  },
+  "keywords": ["entur", "siri", "vehicle-monitoring"],
+  "author": "Lars Wilhelmsen <lars@sral.org>",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^2.6.0",
+    "uuid": "^8.3.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.10.5",
+    "@babel/core": "^7.11.1",
+    "@babel/node": "^7.10.5"
+  }
+}
+
