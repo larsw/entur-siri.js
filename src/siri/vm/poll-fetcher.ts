@@ -48,6 +48,7 @@ const persistToFile = (opts: PersistToFileOpts) => async (response:Response) : P
 const persistToRabbitMQ = (publisher:Publisher) => async (response:Response): Promise<void> => {
   const ts = getUnixTimestamp()
   const buffer = Buffer.from(await response.arrayBuffer())
+  // TODO add structured message with both timestamp and SIRI VM payload.
   await publisher.publishMessage(buffer)
   console.log(`[${new Date(ts * 1000).toLocaleString()}] SIRI VM message sent to exchange.`)
 }

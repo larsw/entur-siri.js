@@ -15,7 +15,7 @@ import {
   RabbitMqChannelCancelledError,
 } from 'nabbitmq'
 
-program.version('0.1.0')
+program.version(require('../../../package.json').version)
 
 program.option(
   '-i, --interval <interval>',
@@ -38,6 +38,11 @@ program.option(
   (value,_) => parseInt(value),
   9851
 )
+
+const fileNameToDateTime = (fileName: string) => {
+  const ts = parseInt(fileName.substring(0, fileName.length - 4))
+  return new Date(ts * 1000).toLocaleString()
+}
 
 const activityToGeoJSON = (activity: VehicleActivity, verbose: boolean): [string, object] => {
   const journey = activity.MonitoredVehicleJourney
@@ -148,6 +153,7 @@ const shovelFromRabbitMQ = async (queue: string, opts: RabbitMQShovelOpts) => {
   const importer = importVehicleActivities(tile38)
   const consumer = await initializeConsumer(queue, connection)
   await consumer.startConsuming().subscribe({
+    // TODO handle structured messages with both timestamp and SIRI VM payload.
     next: async (msg: string) => {
       const vehicleActivities = jp.query(msg, '$..VehicleActivity[*]') as VehicleActivity[]
       //console.log(`[${dateTime}] Processing ${vehicleActivities.length} entries`)
@@ -176,32 +182,9 @@ program
 program
   .command('rabbitmq <queue>')
   .description('imports SIRI VM messages from RabbitMQ')
-  .option('-a, --address', '', 'amqp://localhost:9672/')
-  .option('-u, --user', '', 'guest')
-  .option('-p, --password', '', 'guest')
+  .option('-a, --address <address>', 'RabbitMQ endpoint URL', 'amqp://localhost:9672/')
+  .option('-u, --user <user>', 'RabbitMQ user name', 'guest')
+  .option('-p, --password <password>', 'RabbitMQ password', 'guest')
   .action((queue, opts) => shovelFromRabbitMQ(queue, opts))
 
 program.parseAsync(process.argv)
-
-const fileNameToDateTime = (fileName: string) => {
-  const ts = parseInt(fileName.substring(0, fileName.length - 4))
-  return new Date(ts * 1000).toLocaleString()
-}
-
-// ;(async (promisify) => {
-//   const readdirP = promisify(fs.readdir)
-//   const readFileP = promisify(fs.readFile)
-
-//   const fileNames = await readdirP(program.directory)
-//   console.log(`Ready to import ${fileNames.length} files...`)
-
-//   for (const fileName of fileNames) {
-//     const dateTime = fileNameToDateTime(fileName)
-//     const json = await readFileP(path.join(program.directory, fileName))
-//     const obj = JSON.parse(json)
-//     const vehicleActivities = jp.query(obj, '$..VehicleActivity[*]') as VehicleActivity[]
-//     console.log(`[${dateTime}] Processing ${vehicleActivities.length} entries`)
-//     await importVehicleActivities(vehicleActivities)
-//     await sleep(program.interval)
-//   }
-// })(promisify)
