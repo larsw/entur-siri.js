@@ -9,24 +9,30 @@ import {
   initializeConnection } from '../../common'
 import { Publisher } from 'nabbitmq'
 
-program.version('0.1.0')
+const programVersion = require('../../../package.json').version
+program.version(programVersion)
 program
   .option(
     '-i, --interval <interval>',
-    "interval in MS between poll against entur's SIRI VM endpoint",
+    'interval in seconds between poll against entur\'s SIRI VM endpoint',
     (value:string, _: number):number => parseInt(value),
-    15000
+    15
   )
+  .option(
+    '-u, --user-agent <userAgent>', 
+    'User-Agent header value',
+    `entur-siri.js/${programVersion}`
+    )
   .option(
     '-r, --requestorId <requestorId>',
     'requestorId to use - if not supplied, one will be generated.'
   )
 
-type Opts = {
+type PersistToFileOpts = {
   directory: string
 }
 
-const persistToFile = (opts: Opts) => async (response:Response) : Promise<void> => {
+const persistToFile = (opts: PersistToFileOpts) => async (response:Response) : Promise<void> => {
   const ts = getUnixTimestamp()
   console.log(
     `Writing result to ${opts.directory}/${ts}.json`
@@ -61,21 +67,32 @@ const fetchSiriVM = async (persistResponseFn:PersistFunction) => {
         {
           headers: {
             Accept: 'application/json',
+            'User-Agent': program.useragent
           },
         }
       )
       await persistResponseFn(response)
-      await sleep(program.interval)
+      await sleep(program.interval * 1000)
     } catch (err) {
       console.error(err)
     }
   }
 }
 
+type FilePersisterOpts = {
+
+}
+
+type RabbitMQPersisterOpts = {
+  uri: string,
+  user: string,
+  password: string
+}
+
 program
   .command('file <directory>')
   .description('stores SIRI VM responses to JSON files')
-  .action((directory, opts) => fetchSiriVM(persistToFile({...opts, directory})))
+  .action((directory:string, opts:FilePersisterOpts) => fetchSiriVM(persistToFile({...opts, directory})))
 
 program
   .command('rabbitmq <exchange>')
@@ -83,7 +100,7 @@ program
   .option('-a, --address', 'RabbitMQ address (URI style)', 'amqp://localhost:5672/')
   .option('-u, --user', 'RabbitMQ user', 'guest')
   .option('-p, --password', 'RabbitMQ password', 'guest')
-  .action(async (exchange, opts) => 
+  .action(async (exchange: string, opts: RabbitMQPersisterOpts) => 
     fetchSiriVM(
       persistToRabbitMQ(
         await initializePublisher(exchange,

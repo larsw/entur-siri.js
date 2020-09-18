@@ -22,5 +22,4 @@ declare module 'tile38' {
     coordinates: any[]
     properties?: any
   }
-  //     class Tile38 {}
 }
